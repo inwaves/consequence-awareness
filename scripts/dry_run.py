@@ -236,7 +236,7 @@ def run_scenarios():
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=512,
+                max_new_tokens=2048,
                 temperature=0.6,
                 top_p=0.9,
                 do_sample=True,

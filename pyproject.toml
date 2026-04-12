@@ -1,0 +1,14 @@
+[project]
+name = "consequence-awareness"
+version = "0.1.0"
+description = "White-box consequence awareness in small open models"
+requires-python = ">=3.11, <3.12"
+dependencies = [
+    "openai>=1.30.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

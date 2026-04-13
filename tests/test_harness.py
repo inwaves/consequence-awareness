@@ -521,7 +521,7 @@ class TestScenarioDefinitions:
             low = [s for s in pair if s.variant == "low"][0]
             high = [s for s in pair if s.variant == "high"][0]
             assert low.system_prompt == high.system_prompt, f"Scenario {sid}: system prompts differ"
-            if sid != 30:  # #30 has dynamic user message
+            if sid not in (30, 31, 32):  # dynamic user messages
                 assert low.user_message == high.user_message, f"Scenario {sid}: user messages differ"
 
     def test_pairs_have_identical_tools(self):

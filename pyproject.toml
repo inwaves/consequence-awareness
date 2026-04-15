@@ -9,6 +9,11 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8.0"]
+analysis = [
+    "torch>=2.4",
+    "transformers>=4.51",
+    "safetensors>=0.4",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

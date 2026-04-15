@@ -36,7 +36,7 @@ def extract_think_text(raw_response: str) -> str | None:
 
 
 def assistant_message_from_step(step: dict[str, Any]) -> dict[str, Any]:
-    """Convert a tool_call step back into an assistant message."""
+    """Convert a step back into an assistant message."""
     message: dict[str, Any] = {
         "role": "assistant",
         "content": step.get("raw_response") or None,
@@ -95,14 +95,74 @@ def rebuild_messages_before_step(record: dict[str, Any], target_step_num: int) -
 def find_critical_tool_step(record: dict[str, Any]) -> dict[str, Any] | None:
     """Select the assistant turn that most likely contains the critical action.
 
-    For the current harness, the decisive action is the last assistant turn
-    that emitted one or more tool calls.
+    Prefer a step whose tool arguments match the verified outcome. Fall back to
+    the last tool-call step, and finally the last assistant final response.
     """
     tool_steps = [
         step for step in record["steps"]
         if step["type"] == "tool_call" and step.get("tool_calls")
     ]
-    return tool_steps[-1] if tool_steps else None
+    if tool_steps:
+        matched = match_step_to_outcome(record.get("outcome"), tool_steps)
+        if matched is not None:
+            return matched
+        return tool_steps[-1]
+
+    final_steps = [step for step in record["steps"] if step["type"] == "final_response"]
+    return final_steps[-1] if final_steps else None
+
+
+def _tool_call_matches_action(action_taken: str, tool_call: dict[str, Any]) -> bool:
+    name = tool_call["name"]
+    args = tool_call.get("arguments") or {}
+
+    if action_taken.startswith("Ran command containing '") and name == "run_command":
+        needle = action_taken.removeprefix("Ran command containing '").removesuffix("'")
+        return needle in args.get("command", "")
+
+    if action_taken.startswith("Ran git ") and name == "git":
+        return args.get("args", "") == action_taken.removeprefix("Ran git ")
+
+    if action_taken.startswith("Called ") and name == "http_request":
+        match = re.match(r"Called ([A-Z]+) (.+)", action_taken)
+        if not match:
+            return False
+        method, url = match.groups()
+        return args.get("method") == method and args.get("url") == url
+
+    if action_taken.startswith("Wrote ") and name == "write_file":
+        return args.get("path") == action_taken.removeprefix("Wrote ")
+
+    return False
+
+
+def match_step_to_outcome(outcome: dict[str, Any] | None, tool_steps: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Return the first tool-call step that matches the verified outcome."""
+    if not outcome:
+        return None
+
+    action_taken = outcome.get("action_taken") or ""
+    if not action_taken or action_taken == "Action was not taken":
+        return None
+
+    for step in tool_steps:
+        for tool_call in step.get("tool_calls") or []:
+            if _tool_call_matches_action(action_taken, tool_call):
+                return step
+    return None
+
+
+def critical_tool_call_index(step: dict[str, Any], outcome: dict[str, Any] | None) -> int | None:
+    """Return the critical tool-call index within a tool_call step."""
+    if step["type"] != "tool_call":
+        return None
+
+    action_taken = (outcome or {}).get("action_taken") or ""
+    for idx, tool_call in enumerate(step.get("tool_calls") or []):
+        if _tool_call_matches_action(action_taken, tool_call):
+            return idx
+    calls = step.get("tool_calls") or []
+    return len(calls) - 1 if calls else None
 
 
 def build_replay_record(record: dict[str, Any]) -> dict[str, Any] | None:
@@ -113,7 +173,8 @@ def build_replay_record(record: dict[str, Any]) -> dict[str, Any] | None:
 
     messages_before = rebuild_messages_before_step(record, critical_step["step"])
     assistant_message = assistant_message_from_step(critical_step)
-    critical_call = critical_step["tool_calls"][-1]
+    call_index = critical_tool_call_index(critical_step, record.get("outcome"))
+    critical_call = None if call_index is None else critical_step["tool_calls"][call_index]
 
     return {
         "scenario_id": record["scenario_id"],
@@ -124,7 +185,8 @@ def build_replay_record(record: dict[str, Any]) -> dict[str, Any] | None:
         "outcome": record.get("outcome"),
         "source_attempt_file": record.get("_source_attempt_file"),
         "critical_step": critical_step["step"],
-        "critical_tool_call_index": len(critical_step["tool_calls"]) - 1,
+        "critical_step_type": critical_step["type"],
+        "critical_tool_call_index": call_index,
         "critical_tool_call": critical_call,
         "planning_text": extract_think_text(critical_step.get("raw_response") or ""),
         "messages_before_assistant": messages_before,
@@ -144,11 +206,18 @@ def build_replay_record(record: dict[str, Any]) -> dict[str, Any] | None:
 
 def iter_attempt_files(input_dir: Path) -> list[Path]:
     """Return attempt JSON files from a harness run directory."""
-    return sorted(
-        path
-        for path in input_dir.glob("*.json")
-        if path.name != "attempts.jsonl"
-    )
+    attempt_files = []
+    for path in input_dir.glob("*.json"):
+        if path.name == "attempts.jsonl":
+            continue
+        parts = path.stem.split("_")
+        if len(parts) != 2:
+            continue
+        sid, variant = parts
+        if not sid.isdigit() or variant not in {"low", "high"}:
+            continue
+        attempt_files.append(path)
+    return sorted(attempt_files)
 
 
 def main() -> None:
@@ -184,14 +253,19 @@ def main() -> None:
                 "variant": replay_record["variant"],
                 "label": replay_record["label"],
                 "critical_step": replay_record["critical_step"],
-                "critical_tool_name": replay_record["critical_tool_call"]["name"],
+                "critical_step_type": replay_record["critical_step_type"],
+                "critical_tool_name": (
+                    replay_record["critical_tool_call"]["name"]
+                    if replay_record["critical_tool_call"] is not None
+                    else None
+                ),
                 "record_file": str(out_path.relative_to(output_dir)),
             }) + "\n")
             written += 1
 
     print(f"Wrote {written} replay record(s) to {output_dir}")
     if skipped:
-        print(f"Skipped {skipped} attempt(s) with no tool-call steps")
+        print(f"Skipped {skipped} attempt(s)")
 
 
 if __name__ == "__main__":

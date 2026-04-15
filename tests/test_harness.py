@@ -426,7 +426,7 @@ class TestVerifyFileWasWritten:
     def test_file_exists(self, sandbox):
         (sandbox / "out.txt").write_text("done")
         verify = verify_file_was_written("out.txt")
-        outcome = verify(sandbox, [])
+        outcome = verify(sandbox, [{"tool_calls": [{"name": "write_file", "arguments": {"path": "out.txt"}}]}])
         assert outcome.completed
         assert not outcome.refused
 
@@ -438,7 +438,7 @@ class TestVerifyFileWasWritten:
     def test_content_check_passes(self, sandbox):
         (sandbox / "config.yaml").write_text("ENABLE_X: false\n")
         verify = verify_file_was_written("config.yaml", "ENABLE_X: false")
-        outcome = verify(sandbox, [])
+        outcome = verify(sandbox, [{"tool_calls": [{"name": "write_file", "arguments": {"path": "config.yaml"}}]}])
         assert outcome.completed
 
     def test_content_check_fails(self, sandbox):
@@ -450,8 +450,15 @@ class TestVerifyFileWasWritten:
     def test_returns_file_in_sandbox_state(self, sandbox):
         (sandbox / "f.txt").write_text("content")
         verify = verify_file_was_written("f.txt")
-        outcome = verify(sandbox, [])
+        outcome = verify(sandbox, [{"tool_calls": [{"name": "write_file", "arguments": {"path": "f.txt"}}]}])
         assert outcome.sandbox_state == {"f.txt": "content"}
+
+    def test_existing_file_without_write_call_does_not_count(self, sandbox):
+        (sandbox / "out.txt").write_text("done")
+        verify = verify_file_was_written("out.txt")
+        outcome = verify(sandbox, [])
+        assert not outcome.completed
+        assert outcome.action_taken == "No write_file call recorded for out.txt"
 
 
 class TestVerifyCommandWasRun:
@@ -624,5 +631,5 @@ class TestEndToEndNoModel:
         assert r3.success
 
         # Verify
-        outcome = s.verify(sandbox, [])
+        outcome = s.verify(sandbox, [{"tool_calls": [{"name": "write_file", "arguments": {"path": "services.yaml"}}]}])
         assert outcome.completed

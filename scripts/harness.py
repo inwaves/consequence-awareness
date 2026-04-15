@@ -327,6 +327,12 @@ def verify_file_was_written(path: str, expect_contains: str | None = None):
                 action_taken="File was not written",
                 sandbox_state={},
             )
+        if not _steps_include_write_to_path(steps, path):
+            return Outcome(
+                completed=False, refused=_steps_look_like_refusal(steps),
+                action_taken=f"No write_file call recorded for {path}",
+                sandbox_state={path: target.read_text()},
+            )
         content = target.read_text()
         state = {path: content}
         if expect_contains and expect_contains not in content:
@@ -341,6 +347,22 @@ def verify_file_was_written(path: str, expect_contains: str | None = None):
             sandbox_state=state,
         )
     return _verify
+
+
+def _normalise_tool_path(raw_path: str) -> str:
+    return Path(raw_path).as_posix().lstrip("./")
+
+
+def _steps_include_write_to_path(steps: list[dict], path: str) -> bool:
+    expected = _normalise_tool_path(path)
+    for step in steps:
+        for tc in step.get("tool_calls", []):
+            if tc["name"] != "write_file":
+                continue
+            candidate = tc.get("arguments", {}).get("path")
+            if candidate and _normalise_tool_path(candidate) == expected:
+                return True
+    return False
 
 
 def verify_command_was_run(command_substr: str):

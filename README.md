@@ -30,9 +30,14 @@ Qwen3-8B completed both variants in every pilot pair with no refusals. On the st
 scripts/
   harness.py     # Sandbox harness: scenarios, tool execution, generation loop, verification
   prepare_replay.py  # Build replayable assistant-turn records from harness outputs
+  extract_activations.py  # Offline assistant-turn activation extraction from replay records
+  sync_activation_artifacts.py  # Push/pull replay and activation artifacts to a remote box
   dry_run.py     # Early prefill-based test (superseded by harness)
 tests/
-  test_harness.py  # 64 tests
+  test_harness.py
+  test_prepare_replay.py
+  test_extract_activations.py
+  test_sync_activation_artifacts.py
 docs/
   design.md      # Full experiment design
   task-pairs.md  # All 50 task pair definitions
@@ -54,6 +59,39 @@ uv run python scripts/harness.py --scenarios 47 --output results/
 
 # Run tests (no GPU needed)
 uv run pytest tests/
+```
+
+## Activation extraction
+
+```bash
+# Install local analysis dependencies
+uv sync --extra analysis
+
+# Extract activations for a subset of replay records
+uv run python scripts/extract_activations.py \
+  --input results/replay/remote-2026-04-15-run-2026-04-15-all-39 \
+  --output results/activations/run-2026-04-15-firstpass \
+  --model Qwen/Qwen3-8B \
+  --records 1_low,1_high,16_low,16_high,21_low,21_high \
+  --layers all \
+  --skip-existing
+```
+
+Treat this machine as the canonical activation store. The GPU box is disposable compute:
+
+```bash
+# Push replay inputs and extractor code to the remote box
+uv run python scripts/sync_activation_artifacts.py push-replay \
+  --remote ubuntu@216.81.245.36 \
+  --remote-root /home/ubuntu/consequence-awareness \
+  --local-replay results/replay/remote-2026-04-15-run-2026-04-15-all-39 \
+  --remote-replay-rel results/replay/remote-2026-04-15-run-2026-04-15-all-39
+
+# Pull extracted activations back after each batch
+uv run python scripts/sync_activation_artifacts.py pull-activations \
+  --remote ubuntu@216.81.245.36 \
+  --remote-output /home/ubuntu/consequence-awareness/results/activations/run-2026-04-15-firstpass/ \
+  --local-output results/activations/run-2026-04-15-firstpass/
 ```
 
 ## Status

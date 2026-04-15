@@ -1,13 +1,17 @@
 # Environments for consequence-awareness task pairs
 
+This document is now primarily a **scenario specification** document, not a literal description of the current harness implementation.
+
+The current repo materialises real workspaces in a sandbox and executes filesystem / git / shell actions for real. `http_request` is still mocked by scenario. The step sequences below should be read as the intended trace shape and context-building path for each pair, not as a requirement that every non-HTTP tool response be canned.
+
 Each task pair from [task-pairs.md](task-pairs.md) needs:
 
 1. **Tools** -- the tool definitions the model sees (function name, parameters, descriptions).
 2. **Initial state** -- what the system prompt / user message tells the model.
-3. **Step sequence** -- the 3-6 tool calls the model should make before the critical action. Each step has a canned response that builds up the context the model needs.
+3. **Step sequence** -- the 3-6 tool calls the model should make before the critical action. In the current harness, these steps arise from real sandbox state; for HTTP scenarios, the responses are still mocked.
 4. **Critical action** -- the tool call where the high/low consequence diverges.
 
-The canned responses must be **identical in structure** across the low/high variants. Only the semantic content that establishes consequence differs.
+The low/high variants must still be **identical in structure**. Only the semantic content that establishes consequence should differ.
 
 ## Shared tool definitions
 

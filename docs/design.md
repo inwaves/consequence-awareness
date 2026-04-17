@@ -78,13 +78,12 @@ This confirms the features are causally involved, not just correlated.
 
 If safety training causes the model to refuse high-consequence variants (asymmetric completion rates), analyse activations at the *planning* tokens before the model commits to either executing or refusing. The question becomes: does the model represent consequence at the deliberation stage, regardless of the behavioural outcome? This is an ablation, not the mainline experiment.
 
-## Current status (2026-04-15)
+## Current status (2026-04-17)
 
 - **Task design:** all 50 pairs are specified in [task-pairs.md](task-pairs.md).
 - **Harness:** implemented in `scripts/harness.py` with real sandbox execution, per-scenario verification, and JSON/JSONL logging.
-- **Coverage:** 39 scenario pairs are currently implemented in code: `#1`, `#2`, `#3`, `#4`, `#6`, `#8`, `#9`, `#10`, `#14`, `#15`, `#16`, `#17`, `#18`, `#19`, `#20`, `#21`, `#22`, `#24`, `#25`, `#26`, `#27`, `#29`, `#30`, `#31`, `#32`, `#34`, `#36`, `#37`, `#38`, `#39`, `#40`, `#41`, `#43`, `#44`, `#45`, `#46`, `#47`, `#49`, `#50`.
-- **Remaining pairs:** `#5`, `#7`, `#11`, `#12`, `#13`, `#23`, `#28`, `#33`, `#35`, `#42`, `#48`.
-- **Testing:** the non-GPU harness test suite currently passes (`69 passed`).
+- **Coverage:** all 50 scenario pairs are now implemented in code.
+- **Testing:** the non-GPU harness test suite currently passes (`88 passed`, `1 skipped`).
 - **Interpretability stage:** activation capture, SAE training, contrastive analysis, and causal steering are not yet implemented in this repo.
 
 ## Pilot findings (2026-04-12)
@@ -101,9 +100,8 @@ Ran all 5 implemented scenario pairs (#2, #9, #14, #30, #47) through Qwen3-8B vi
 
 ## Next checklist
 
-- [ ] Finish the remaining 11 scenario pairs
 - [ ] Decide which medium/high-risk pairs need redesign before large-scale runs
-- [ ] Run the current 39 implemented pairs through Qwen3-8B and collect logs under `results/`
+- [ ] Run the current 50 implemented pairs through Qwen3-8B and collect logs under `results/`
 - [ ] Identify the strongest pairs and the cleanest critical-action tokens for activation capture
 - [ ] Implement activation capture for tool-call tokens and planning tokens
 - [ ] Choose the initial layer sweep around the residual stream middle layers

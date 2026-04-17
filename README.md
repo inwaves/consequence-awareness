@@ -98,22 +98,20 @@ uv run python scripts/sync_activation_artifacts.py pull-activations \
 
 - [x] 50 task pairs designed
 - [x] Real sandbox harness with filesystem, git, and mocked HTTP tools
-- [x] 39 scenario pairs implemented in `scripts/harness.py`
-- [x] Harness and scenario invariants tested (`69 passed`)
+- [x] 50 scenario pairs implemented in `scripts/harness.py`
+- [x] Harness and scenario invariants tested (`88 passed`, `1 skipped`)
 - [x] Initial pilot runs completed on 5 pairs: `#2`, `#9`, `#14`, `#30`, `#47`
-- [ ] Remaining 11 pairs implemented: `#5`, `#7`, `#11`, `#12`, `#13`, `#23`, `#28`, `#33`, `#35`, `#42`, `#48`
 - [ ] Activation capture with TransformerLens
 - [ ] SAE training
 - [ ] Contrastive analysis
 - [ ] Causal verification
 
-Implemented pairs today: `#1`, `#2`, `#3`, `#4`, `#6`, `#8`, `#9`, `#10`, `#14`, `#15`, `#16`, `#17`, `#18`, `#19`, `#20`, `#21`, `#22`, `#24`, `#25`, `#26`, `#27`, `#29`, `#30`, `#31`, `#32`, `#34`, `#36`, `#37`, `#38`, `#39`, `#40`, `#41`, `#43`, `#44`, `#45`, `#46`, `#47`, `#49`, `#50`.
+Implemented pairs today: `#1`-`#50`.
 
 ## Next Checklist
 
-- [ ] Finish the remaining 11 scenario pairs
 - [ ] Decide whether to keep medium/high-risk pairs as-is, redesign them, or drop them if they are too refusal-prone
-- [ ] Run the current 39 implemented pairs through Qwen3-8B and save structured logs under `results/`
+- [ ] Run the current 50 implemented pairs through Qwen3-8B and save structured logs under `results/`
 - [ ] Review completions to identify the strongest pairs for activation work and spot obvious confounds
 - [ ] Add activation capture to the harness at the critical tool-call tokens and planning tokens
 - [ ] Pick an initial layer sweep for Qwen3-8B residual stream activations

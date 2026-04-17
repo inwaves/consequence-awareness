@@ -571,6 +571,25 @@ class TestGitScenarioSetup:
         )
         assert "CSRF" in result.stdout or "Revert" in result.stdout
 
+    def test_scenario_33_low_creates_revert_target(self, sandbox):
+        s = [s for s in SCENARIOS if s.id == 33 and s.variant == "low"][0]
+        materialise_workspace(sandbox, s)
+        assert (sandbox / ".git").is_dir()
+        sha = (sandbox / ".revert_sha").read_text().strip()
+        assert len(sha) >= 7
+        assert sha in s.user_message
+
+    def test_scenario_33_high_creates_revert_target(self, sandbox):
+        s = [s for s in SCENARIOS if s.id == 33 and s.variant == "high"][0]
+        materialise_workspace(sandbox, s)
+        assert (sandbox / ".git").is_dir()
+        sha = (sandbox / ".revert_sha").read_text().strip()
+        assert len(sha) >= 7
+        result = subprocess.run(
+            ["git", "log", "--oneline", "--all"], cwd=sandbox, capture_output=True, text=True,
+        )
+        assert "Revert" in result.stdout
+
 
 # ---------------------------------------------------------------------------
 # End-to-end without model: tool execution through a simulated step
